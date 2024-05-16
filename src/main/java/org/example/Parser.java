@@ -141,24 +141,26 @@ public class Parser {
             String left = it.next();
             boolean flag = false;// 是否有左递归
             ArrayList<ArrayList<String>> rightList = MAP.get(left);
-            ArrayList<String> oldRightCell = new ArrayList<>(); // 旧产生的右边
-            ArrayList<ArrayList<String>> newLeftNew = new ArrayList<>();// 存放新的左边和新的右边
+            ArrayList<ArrayList<String>> oldRightOld = new ArrayList<>(); // 旧产生的右边
+            ArrayList<ArrayList<String>> newLeftNew = new ArrayList<>();// 存放新的右边
 
             // 消除直接左递归
             for (int i = 0; i < rightList.size(); i++) {
-                ArrayList<String> newRightCell = new ArrayList<>(); // 新产生式的右边
+                ArrayList<String> newRightCell = new ArrayList<>(); // 新产生式的右边子项
+                ArrayList<String> oldRightCell = new ArrayList<>(); // 旧产生式的右边子项
                 if (rightList.get(i).get(0).equals(left)) {
                     for (int j = 1; j < rightList.get(i).size(); j++) {
                         newRightCell.add(rightList.get(i).get(j));
                     }
                     flag = true;
-                    newRightCell.add(left + "\'");
+                    newRightCell.add(autoIncr.get(left) + "\'");
                     newLeftNew.add(newRightCell);
                 } else {
                     for (int j = 0; j < rightList.get(i).size(); j++) {
                         oldRightCell.add(rightList.get(i).get(j));
                     }
-                    oldRightCell.add(left + "\'");
+                    oldRightCell.add(autoIncr.get(left) + "\'");
+                    oldRightOld.add(oldRightCell);
                 }
             }
             if (flag) {// 如果有左递归，则更新MAP
@@ -168,8 +170,7 @@ public class Parser {
                 VN.add(autoIncr.get(left)); // 加入新的VN
                 VT.add("ε"); // 加入ε到VT
                 ArrayList<ArrayList<String>> newLeftOld = new ArrayList<>();// 存放原先，但是产生新的右边
-                newLeftOld.add(oldRightCell);
-                MAP.put(left, newLeftOld);
+                MAP.put(left, oldRightOld);
             }
         }
     }

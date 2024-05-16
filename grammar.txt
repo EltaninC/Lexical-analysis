@@ -1,4 +1,4 @@
 X→ABCd
-A→Af|c
+A→Af|Ad|b|c
 B→bd|b|ε
 C→c|ε
