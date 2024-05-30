@@ -18,25 +18,60 @@ public class Parser {
 
     public static void run() {
         init(); // 初始化变量
-        identifyVnVt(readFile(new File(PATH)));// 符号分类,并以key-value形式存于MAP中
-        reformMap();// 消除左递归和提取左公因子
-        findFirst(); // 求FIRST集合
-        findFollow(); // 求FOLLOW集合
-        // 断点测试
-//		VN.toString();
-//		VT.toString();
-//		MAP.toString();
-//		FOLLOW.toString();
-//		FIRST.toString();
-//		oneLeftFirst.toString();
-        if (isLL1()) {
-            preForm(); // 构建预测分析表
-            // printAutoPre("aacbd"); // 示例推导
-            System.out.println("请输入要分析的单词串:");
-            Scanner in = new Scanner(System.in);
-            printAutoPre(in.nextLine());
-            in.close();
+        // 文件读入
+        ArrayList<String> fileRead = readFile(new File(PATH));
+        ArrayList<ArrayList<String>> grammar = new ArrayList<>();
+        ArrayList<String> aGrammar = new ArrayList<>();
+        int num = 0;
+        boolean flag = false;
+        for (String line: fileRead) {
+            if (flag == true && line.isEmpty() == true) {
+                flag = false;
+
+                aGrammar = new ArrayList<>();
+                continue;
+            }
+            if (flag == false && line.isEmpty() == false) {
+                num++;
+                flag = true;
+                grammar.add(aGrammar);
+                grammar.get(num-1).add(line);
+                continue;
+            }
+            if (!line.isEmpty()) { grammar.get(num-1).add(line); continue;}
         }
+        System.out.println("文件中共有" + num + "个文法，如果所示");
+        for (int i = 0; i < num; i++){
+            System.out.println("文法"+(i+1)+":");
+            for (String s: grammar.get(i)) {
+                System.out.println(s);
+            }
+            System.out.println("\n");
+        }
+        int choice = -1;
+        System.out.println("请选择其中一个文法进一步分析");
+        Scanner in = new Scanner(System.in);
+        choice = in.nextInt();
+        if (choice>0&&choice<=num){
+            identifyVnVt(grammar.get(choice-1));// 符号分类,并以key-value形式存于MAP中
+            reformMap();// 消除左递归和提取左公因子
+            findFirst(); // 求FIRST集合
+            findFollow(); // 求FOLLOW集合
+            if (isLL1()) {
+                preForm(); // 构建预测分析表
+                // printAutoPre("aacbd"); // 示例推导
+                System.out.println("请输入要分析的单词串:");
+                in.nextLine();
+                printAutoPre(in.nextLine());
+                in.close();
+                return;
+            }
+        }
+        else {
+            System.out.println("请选择正确的文法编号");
+        }
+        in.close();
+        return;
     }
 
     // 变量初始化
@@ -107,9 +142,8 @@ public class Parser {
 
 
     private static void reformMap() {
-        // 消除直接左递归
+        // 消除直接左递归和隐式左递归
         leftRecursion();
-        // 间接左递归，待解决
         // 提取左公因子
         leftFactor();
 
@@ -144,7 +178,7 @@ public class Parser {
             ArrayList<ArrayList<String>> oldRightOld = new ArrayList<>(); // 旧产生的右边
             ArrayList<ArrayList<String>> newLeftNew = new ArrayList<>();// 存放新的右边
 
-            // 消除直接左递归
+            // 消除左递归
             for (int i = 0; i < rightList.size(); i++) {
                 ArrayList<String> newRightCell = new ArrayList<>(); // 新产生式的右边子项
                 ArrayList<String> oldRightCell = new ArrayList<>(); // 旧产生式的右边子项
@@ -155,26 +189,62 @@ public class Parser {
                     flag = true;
                     newRightCell.add(autoIncr.get(left) + "\'");
                     newLeftNew.add(newRightCell);
+                } else if (VN.contains(rightList.get(i).get(0))) { //消除隐式左递归
+                    ArrayList<ArrayList<String>> conversion = conversion(rightList.get(i), left);
+                    if(!conversion.isEmpty()){
+                        rightList.remove(i);
+                        rightList.addAll(conversion);
+                        i--;
+                    }
                 } else {
-                    for (int j = 0; j < rightList.get(i).size(); j++) {
-                        oldRightCell.add(rightList.get(i).get(j));
+                    if(!rightList.get(i).get(0).equals("ε")) {
+                        oldRightCell.addAll(rightList.get(i));
                     }
                     oldRightCell.add(autoIncr.get(left) + "\'");
                     oldRightOld.add(oldRightCell);
                 }
             }
-            if (flag) {// 如果有左递归，则更新MAP
+            if (flag && !oldRightOld.isEmpty()) {// 如果有左递归，则更新MAP
                 newLeftNew.add(nullSign);
                 autoIncr.put(left, autoIncr.get(left) + "\'");// 自动加'的map,保证符号唯一性
                 MAP.put(autoIncr.get(left), newLeftNew);
                 VN.add(autoIncr.get(left)); // 加入新的VN
                 VT.add("ε"); // 加入ε到VT
-                ArrayList<ArrayList<String>> newLeftOld = new ArrayList<>();// 存放原先，但是产生新的右边
                 MAP.put(left, oldRightOld);
             }
         }
     }
 
+    //隐式转非隐式
+    private static ArrayList<ArrayList<String>> conversion(ArrayList<String> arrayList,String left){
+        boolean isDo = false;
+        ArrayList<ArrayList<String>> arrayLists1 = MAP.get(arrayList.get(0));
+        for (int i = 0; i < arrayLists1.size(); i++) {
+            ArrayList<String> list = arrayLists1.get(i);
+            if(list.get(0).equals(left)){
+                isDo = true;
+            } else if (VN.contains(list.get(0))) {
+                ArrayList<ArrayList<String>> conversion = conversion(list, left);
+                if(!conversion.isEmpty()){
+                    arrayLists1.remove(i);
+                    arrayLists1.addAll(conversion);
+                    i--;
+                }
+            }
+        }
+        ArrayList<ArrayList<String>> arrayLists = new ArrayList<>();
+        if(isDo){
+            for(int i = 0; i < arrayLists1.size(); i++){
+                ArrayList<String> a = new ArrayList<>();
+                if(!arrayLists1.get(i).get(0).equals("ε")) {
+                    a.addAll(arrayLists1.get(i));
+                }
+                a.addAll(arrayList.subList(1,arrayList.size()));
+                arrayLists.add(a);
+            }
+        }
+        return arrayLists;
+    }
 
     //消除左因子
     private static void leftFactor() {
@@ -232,6 +302,8 @@ public class Parser {
             }
         }
     }
+
+
 
     public static ArrayList<String> commonPrefix(ArrayList<String> str1, ArrayList<String> str2) {
         int i = 0;
