@@ -28,3 +28,23 @@ C→c|ε
 S→Aa|b
 A→Ac|Sd|ε
 
+S→Aa|f
+A→Ac|Sd|Bd
+B→Bb|c
+
+X→ABCd
+A→Af|c
+B→bd|b|ε
+C→c|ε
+
+
+A→Af|c
+B→bd|b|ε
+C→c|ε
+
+
+A→aa|aaa|aaab|abc|c|cc|ac
+
+A→aa|aaa|cc|c
+
+A→Aa|Ab
